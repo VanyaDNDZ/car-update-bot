@@ -1,0 +1,4 @@
+config.ini
+scrapinghub.yml
+.idea/*
+__pycache__/*
