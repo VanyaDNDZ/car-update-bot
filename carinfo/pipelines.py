@@ -12,6 +12,9 @@ from collections import OrderedDict
 class JsonWithEncodingPipeline:
 
     def __init__(self):
+        self.file = None
+
+    def open_spider(self, spider):
         self.file = codecs.open('data_utf8.json', 'w', encoding='utf-8')
 
     def process_item(self, item, spider):
