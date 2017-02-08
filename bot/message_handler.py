@@ -36,7 +36,8 @@ def car_iterator(bot, update):
 
     try:
         if not cars or int(query.data)+1 > len(cars):
-            bot.sendMessage(query.message.chat_id, text='Список пуст')
+            bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
+                                message_id=query.message.message_id)
         else:
             keyboard = [[InlineKeyboardButton("Next car", callback_data=str(int(query.data) + 1))]]
 
