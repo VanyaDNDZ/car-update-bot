@@ -1,8 +1,8 @@
 import logging
 
 from scrapinghub import Connection
-from telegram import Bot
-from telegram.ext import Updater, CommandHandler, Job, JobQueue
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, Job, JobQueue, CallbackQueryHandler
 
 from bot.db.actions import get_cars, update_car, get_stats
 from .config import get_config
@@ -24,9 +24,28 @@ def cars(bot, update):
     if not cars:
         bot.sendMessage(update.message.chat_id, text='Список пуст')
     else:
-        bot.sendMessage(update.message.chat_id,
-                        text="\n".join(["{}".format(car.__dict__) for car in
-                                        cars[:15]]))
+        keyboard = [[InlineKeyboardButton("Next car", callback_data='2')]]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text(text="{}".format(cars[0].url), reply_markup=reply_markup)
+
+
+def car_iterator(bot, update):
+    cars = get_cars()
+    query = update.callback_query
+
+    try:
+        if not cars or int(query.data)+1 > len(cars):
+            bot.sendMessage(query.message.chat_id, text='Список пуст')
+        else:
+            keyboard = [[InlineKeyboardButton("Next car", callback_data=str(int(query.data) + 1))]]
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            bot.editMessageText(text="{}".format(cars[int(query.data)].url), chat_id=query.message.chat_id,
+                                message_id=query.message.message_id, reply_markup=reply_markup)
+    except Exception as e:
+        print(e)
 
 
 def today_count(bot, update):
@@ -95,12 +114,13 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", start))
     dp.add_handler(CommandHandler("cars", cars))
-    dp.add_handler(CommandHandler("todayCount", today_count))
+    dp.add_handler(CommandHandler("todaycount", today_count))
     dp.add_handler(CommandHandler("update", update_cars))
-    dp.add_handler(CommandHandler("setUpdate", set_update, pass_args=True, pass_job_queue=True))
-    dp.add_handler(CommandHandler("unsetUpdate", unset_update, pass_job_queue=True))
-    dp.add_handler(CommandHandler("updateInfo", update_info, pass_job_queue=True))
+    dp.add_handler(CommandHandler("setupdate", set_update, pass_args=True, pass_job_queue=True))
+    dp.add_handler(CommandHandler("unsetupdate", unset_update, pass_job_queue=True))
+    dp.add_handler(CommandHandler("updateinfo", update_info, pass_job_queue=True))
     dp.add_handler(CommandHandler("stats", stats))
+    dp.add_handler(CallbackQueryHandler(car_iterator))
 
     # log all errors
     dp.add_error_handler(error)

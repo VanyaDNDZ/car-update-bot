@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 def get_cars(days=0):
     with closing(get_session()) as session:
-
-        cars = session.query(Cars).filter(Cars.update_dt >= datetime.date.today() - timedelta(days=days)).all()
+        cars = session.query(Cars).filter(Cars.update_dt >= datetime.date.today() - timedelta(days=days)).order_by(
+            Cars.id).all()
 
         return cars
 
@@ -39,4 +39,5 @@ def update_car(item):
 
 def get_stats():
     with closing(get_session()) as session:
-        return session.query(Cars.base_url, Cars.gear, func.count(Cars.base_url)).group_by(Cars.base_url, Cars.gear).all()
+        return session.query(Cars.base_url, Cars.gear, func.count(Cars.base_url)).group_by(Cars.base_url,
+                                                                                           Cars.gear).all()

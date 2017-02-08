@@ -22,7 +22,7 @@ class PlanetaSpider(CrawlSpider):
             car_info = CarInfoItem()
             car_info['base_url'] = "https://planetavto.com.ua"
             car_info['id'] = row.xpath('.//a[contains(@href, "car") and @class="img"]/@href').extract_first().split('/')[-1]
-            car_info['url'] = row.xpath('.//a[contains(@href, "car") and @class="img"]/@href').extract_first()
+            car_info['url'] = "https://planetavto.com.ua" + row.xpath('.//a[contains(@href, "car") and @class="img"]/@href').extract_first()
             car_info['desc'] = row.xpath('.//strong/a/text()').extract_first()
             car_info['year'] = row.xpath('.//strong/text()').extract()[1].strip()[-4:]
             car_info['price'] = row.xpath('.//strong/text()').extract()[2].strip()
