@@ -10,11 +10,8 @@ from bot.message_handler import run_chat_bot
 
 
 def start_bot():
-    click.echo("Start bot")
     load_config()
-    click.echo("Config loaded")
     Base.metadata.create_all(get_engine())
-    click.echo("Models created")
     run_chat_bot()
 
 

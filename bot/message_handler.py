@@ -3,11 +3,14 @@ import logging
 from scrapinghub import Connection
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, Job, JobQueue, CallbackQueryHandler
+from telegram.ext.regexhandler import RegexHandler
 
-from bot.db.actions import get_cars, update_car, get_stats
+from bot.db.actions import get_cars, update_car, get_stats, create_query, get_filtered
+from bot.utils import save_query, get_saved
 from .config import get_config
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def start(bot: Bot, update):
@@ -35,7 +38,7 @@ def car_iterator(bot, update):
     query = update.callback_query
 
     try:
-        if not cars or int(query.data)+1 > len(cars):
+        if not cars or int(query.data) + 1 > len(cars):
             bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
                                 message_id=query.message.message_id)
         else:
@@ -49,22 +52,55 @@ def car_iterator(bot, update):
         print(e)
 
 
+def filtered_car_iterator(bot, update):
+    query = update.callback_query
+    index, query_name = query.data.split(' ')
+
+    stored_filter = get_saved(query_name)
+    if stored_filter:
+        filtred_cars = get_filtered(stored_filter['filter'], stored_filter['order'])
+
+        try:
+            if not filtred_cars or int(index) + 1 > len(filtred_cars):
+                bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
+                                    message_id=query.message.message_id)
+            else:
+                keyboard = [
+                    [InlineKeyboardButton("Next", callback_data=' '.join([str(int(index) + 1), query_name]))]]
+
+                reply_markup = InlineKeyboardMarkup(keyboard)
+
+                bot.editMessageText(text="{}".format(filtred_cars[int(index)].url), chat_id=query.message.chat_id,
+                                    message_id=query.message.message_id, reply_markup=reply_markup)
+        except Exception as e:
+            print(e)
+    else:
+        bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
+                            message_id=query.message.message_id)
+
+
 def today_count(bot, update):
     cars = get_cars()
     bot.sendMessage(update.message.chat_id, text='Сегодня добавили {}'.format(len(cars)))
 
 
 def update_cars(bot=None, update=None):
-    conn = Connection(get_config()['SCRAPYHUB']['token'])
-    project = conn[int(get_config()['SCRAPYHUB']['PROJECT_ID'])]
-    before_update_cnt = len(get_cars())
-    for job in project.jobs():
-        for item in job.items():
-            update_car(item)
-    after_update_cnt = len(get_cars())
+    logger.info('Start update db')
+
+    def get_iterator():
+        conn = Connection(get_config()['SCRAPYHUB']['token'])
+        project = conn[int(get_config()['SCRAPYHUB']['PROJECT_ID'])]
+        for job in project.jobs():
+            for item in job.items():
+                yield item
+
+    updated = update_car(get_iterator())
     chat_id = update.context if isinstance(update, Job) else update.message.chat_id
-    if after_update_cnt - before_update_cnt > 0:
-        bot.sendMessage(chat_id, text='Добавлено {} записей'.format(after_update_cnt - before_update_cnt))
+    if len(updated) > 0:
+        bot.sendMessage(chat_id, text='Добавлено {} записей'.format(len(updated)))
+        bot.sendMessage(chat_id, text='Просмотреть {}'.format(save_query(create_query(updated))))
+
+    logger.info('DB updated')
 
 
 def stats(bot, update):
@@ -105,6 +141,20 @@ def update_info(bot: Bot, update, job_queue: JobQueue):
         update.message.reply_text("No update job")
 
 
+def query_handler(bot: Bot, update):
+    stored_filter = get_saved(update.message.text)
+    if stored_filter:
+        filtred_cars = get_filtered(stored_filter['filter'], stored_filter['order'])
+        if len(filtred_cars):
+            keyboard = [[InlineKeyboardButton("Next", callback_data=' '.join(['2', update.message.text]))]]
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(text="{}".format(filtred_cars[0].url), reply_markup=reply_markup)
+
+    else:
+        bot.sendMessage(update.message.chat_id, text='Список пуст')
+
+
 def run_chat_bot():
     updater = Updater(get_config()['BOTCONFIG']['token'])
 
@@ -121,7 +171,9 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("unsetupdate", unset_update, pass_job_queue=True))
     dp.add_handler(CommandHandler("updateinfo", update_info, pass_job_queue=True))
     dp.add_handler(CommandHandler("stats", stats))
-    dp.add_handler(CallbackQueryHandler(car_iterator))
+    dp.add_handler(RegexHandler("^/query_(\w){10}$", query_handler))
+    dp.add_handler(CallbackQueryHandler(car_iterator, pattern="^\d+$"))
+    dp.add_handler(CallbackQueryHandler(filtered_car_iterator, pattern="^\d+\s/query_(\w){10}$"))
 
     # log all errors
     dp.add_error_handler(error)

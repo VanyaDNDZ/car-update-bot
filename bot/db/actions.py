@@ -8,7 +8,10 @@ from sqlalchemy.sql.functions import func
 from bot.db.models import Cars
 from .engine import get_session
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def get_cars(days=0, filters=None):
@@ -20,22 +23,31 @@ def get_cars(days=0, filters=None):
         return cars
 
 
-def update_car(item):
-    item.pop("_type", None)
+def get_filtered(q_filter, order):
     with closing(get_session()) as session:
+        q = session.query(Cars)
+        q = q.filter(*q_filter)
+        cars = q.order_by(*order).all()
 
-        car = session.query(Cars).filter(Cars.id == item['id']).first()
+        return cars
 
-        if not car:
-            try:
+
+def update_car(car_iterator):
+    added_ids = []
+    with closing(get_session()) as session:
+        for item in car_iterator:
+            item.pop("_type", None)
+            car = session.query(Cars).filter(Cars.id == item['id']).first()
+            if not car:
+                added_ids.append(item['id'])
                 session.add(Cars(**item, update_dt=datetime.date.today()))
-                session.flush()
-                session.commit()
-            except Exception as e:
-                logger.error(e)
-                raise e
+        session.flush()
+        session.commit()
+    return added_ids
 
-        return car
+
+def create_query(car_ids: list) -> tuple:
+    return {"filter": (Cars.id.in_(car_ids),), "order": (Cars.id,)}
 
 
 def get_stats():
