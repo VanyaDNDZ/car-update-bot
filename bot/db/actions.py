@@ -11,10 +11,11 @@ from .engine import get_session
 logger = logging.getLogger(__name__)
 
 
-def get_cars(days=0):
+def get_cars(days=0, filters=None):
     with closing(get_session()) as session:
-        cars = session.query(Cars).filter(Cars.update_dt >= datetime.date.today() - timedelta(days=days)).order_by(
-            Cars.id).all()
+        q = session.query(Cars)
+        q = q.filter(Cars.update_dt >= datetime.date.today() - timedelta(days=days))
+        cars = q.order_by(Cars.id).all()
 
         return cars
 
