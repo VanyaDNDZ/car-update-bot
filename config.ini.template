@@ -1,0 +1,9 @@
+[BOTCONFIG]
+TOKEN = ${BOTTOKEN}
+
+[DBCONFIG]
+DB_URL = sqlite+pysqlite:///showsdb.sqlite
+
+[SCRAPYHUB]
+TOKEN = ${SCRAPYHUBTOKEN}
+PROJECT_ID = ${SCRAPYHUBPROJECT}
