@@ -42,12 +42,14 @@ def car_iterator(bot, update):
             bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
                                 message_id=query.message.message_id)
         else:
-            keyboard = [[InlineKeyboardButton("Next car", callback_data=str(int(query.data) + 1))]]
+            kwargs = dict()
+            if int(query.data) + 1 < len(cars):
+                keyboard = [[InlineKeyboardButton("Next", callback_data=str(int(query.data) + 1))]]
 
-            reply_markup = InlineKeyboardMarkup(keyboard)
+                kwargs.update(reply_markup=InlineKeyboardMarkup(keyboard))
 
             bot.editMessageText(text="{}".format(cars[int(query.data)].url), chat_id=query.message.chat_id,
-                                message_id=query.message.message_id, reply_markup=reply_markup)
+                                message_id=query.message.message_id, **kwargs)
     except Exception as e:
         print(e)
 
@@ -65,13 +67,16 @@ def filtered_car_iterator(bot, update):
                 bot.editMessageText(text='Список пуст', chat_id=query.message.chat_id,
                                     message_id=query.message.message_id)
             else:
-                keyboard = [
-                    [InlineKeyboardButton("Next", callback_data=' '.join([str(int(index) + 1), query_name]))]]
+                kwargs = dict()
 
-                reply_markup = InlineKeyboardMarkup(keyboard)
+                if int(index) + 1 < len(filtred_cars):
+                    keyboard = [
+                        [InlineKeyboardButton("Next", callback_data=' '.join([str(int(index) + 1), query_name]))]]
+
+                    kwargs.update(reply_markup=InlineKeyboardMarkup(keyboard))
 
                 bot.editMessageText(text="{}".format(filtred_cars[int(index)].url), chat_id=query.message.chat_id,
-                                    message_id=query.message.message_id, reply_markup=reply_markup)
+                                    message_id=query.message.message_id, **kwargs)
         except Exception as e:
             print(e)
     else:
@@ -97,9 +102,9 @@ def update_cars(bot=None, update=None):
     updated = update_car(get_iterator())
     chat_id = update.context if isinstance(update, Job) else update.message.chat_id
     if len(updated) > 0:
-        bot.sendMessage(chat_id, text='Добавлено {} записей'.format(len(updated)))
-        bot.sendMessage(chat_id, text='Просмотреть {}'.format(save_query(create_query(updated))))
-
+        bot.sendMessage(chat_id, text='Добавлено {} записей. Просмотреть {}'.format(len(updated),
+                                                                                    save_query(create_query(updated))))
+        bot.sendMessage(chat_id, text=''.format())
     logger.info('DB updated')
 
 
