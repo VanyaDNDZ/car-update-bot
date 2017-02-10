@@ -27,7 +27,7 @@ def cars(bot, update):
     if not cars:
         bot.sendMessage(update.message.chat_id, text='Список пуст')
     else:
-        keyboard = [[InlineKeyboardButton("Next car", callback_data='2')]]
+        keyboard = [[InlineKeyboardButton("Next car", callback_data='1')]]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         update.message.reply_text(text="{}".format(cars[0].url), reply_markup=reply_markup)
@@ -146,7 +146,7 @@ def query_handler(bot: Bot, update):
     if stored_filter:
         filtred_cars = get_filtered(stored_filter['filter'], stored_filter['order'])
         if len(filtred_cars):
-            keyboard = [[InlineKeyboardButton("Next", callback_data=' '.join(['2', update.message.text]))]]
+            keyboard = [[InlineKeyboardButton("Next", callback_data=' '.join(['1', update.message.text]))]]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(text="{}".format(filtred_cars[0].url), reply_markup=reply_markup)
