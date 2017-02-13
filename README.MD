@@ -8,8 +8,8 @@ Bot commands
 cars - Get today loaded cars
 todaycount - Get loaded count
 update - Update db manualy 
-setupdate - Set update interval (default 3600 sec)
-unsetupdate - Remove auto update
+subscribe - Subscribe on notification
+unsubscribe - Unsubscribe from notification
 updateinfo - Update information
 stats - get stats
 ```

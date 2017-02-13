@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from sqlalchemy.sql.functions import func
 
-from bot.db.models import Cars
+from bot.db.models import Cars, Subscribers
 from .engine import get_session
 
 logging.basicConfig(level=logging.DEBUG,
@@ -44,6 +44,45 @@ def update_car(car_iterator):
         session.flush()
         session.commit()
     return added_ids
+
+
+def save_subscribe(chat_id: str) -> bool:
+    with closing(get_session()) as session:
+        sub = session.query(Subscribers).filter(Subscribers.chat_id == chat_id).first()
+        if not sub:
+            session.add(Subscribers(chat_id=chat_id, is_active='t'))
+            status = 'added'
+        elif sub.is_active == 'f':
+            sub.is_active = 't'
+            session.add(sub)
+            status = 're-activated'
+        else:
+            status = 'already active'
+        session.flush()
+        session.commit()
+    return status
+
+
+def save_unsubscribe(chat_id: str) -> bool:
+    with closing(get_session()) as session:
+        sub = session.query(Subscribers).filter(Subscribers.chat_id == chat_id).first()
+        if not sub:
+            status = 'no sub'
+        elif sub.is_active == 't':
+            sub.is_active = 'f'
+            session.add(sub)
+            status = 'deactivated'
+        else:
+            status = 'no sub'
+        session.flush()
+        session.commit()
+    return status
+
+
+def get_subscribers():
+    with closing(get_session()) as session:
+        sub = session.query(Subscribers).filter(Subscribers.is_active == 't').all()
+    return sub
 
 
 def create_query(car_ids: list) -> tuple:

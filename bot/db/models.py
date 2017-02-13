@@ -15,3 +15,9 @@ class Cars(Base):
     year = Column(TEXT)
     mileage = Column(TEXT)
     update_dt = Column(DATE)
+
+
+class Subscribers(Base):
+    __tablename__ = 'subscribers'
+    chat_id = Column(TEXT, primary_key=True)
+    is_active = Column(TEXT, default='t')

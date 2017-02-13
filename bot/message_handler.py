@@ -5,7 +5,8 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, Job, JobQueue, CallbackQueryHandler
 from telegram.ext.regexhandler import RegexHandler
 
-from bot.db.actions import get_cars, update_car, get_stats, create_query, get_filtered
+from bot.db.actions import get_cars, update_car, get_stats, create_query, get_filtered, save_subscribe, save_unsubscribe, \
+    get_subscribers
 from bot.utils import save_query, get_saved
 from .config import get_config
 
@@ -90,6 +91,10 @@ def today_count(bot, update):
 
 
 def update_cars(bot=None, update=None):
+
+    def notify(chat_id, count, query):
+        bot.sendMessage(chat_id, text='Добавлено {} записей. Просмотреть {}'.format(count, query))
+
     logger.info('Start update db')
 
     def get_iterator():
@@ -100,11 +105,10 @@ def update_cars(bot=None, update=None):
                 yield item
 
     updated = update_car(get_iterator())
-    chat_id = update.context if isinstance(update, Job) else update.message.chat_id
     if len(updated) > 0:
-        bot.sendMessage(chat_id, text='Добавлено {} записей. Просмотреть {}'.format(len(updated),
-                                                                                    save_query(create_query(updated))))
-        bot.sendMessage(chat_id, text=''.format())
+        for row in get_subscribers():
+            notify(row.chat_id, len(updated), save_query(create_query(updated)))
+
     logger.info('DB updated')
 
 
@@ -119,18 +123,22 @@ def stats(bot, update):
                                         car_stats]))
 
 
-def set_update(bot: Bot, update, args: tuple, job_queue: JobQueue):
-    try:
-        due = int(args[0]) if len(args) else 3600
-        if due < 1800:
-            due = 1800
-        job = Job(update_cars, due, repeat=True, context=update.message.chat_id)
-        for j in job_queue.jobs():
-            j.schedule_removal()
-        job_queue.put(job)
-        update.message.reply_text('Set update interval {}'.format(due))
-    except (IndexError, ValueError):
-        update.message.reply_text('Use command as /setUpdate 3600')
+def set_update(job_queue: JobQueue):
+    due = 1800
+    job = Job(update_cars, due, repeat=True)
+    for j in job_queue.jobs():
+        j.schedule_removal()
+    job_queue.put(job)
+
+
+def subscribe(bot: Bot, update):
+    status = save_subscribe(update.message.chat_id)
+    update.message.reply_text("Subscribe status:{}".format(status))
+
+
+def unsubscribe(bot: Bot, update):
+    status = save_unsubscribe(update.message.chat_id)
+    update.message.reply_text("Subscribe status:{}".format(status))
 
 
 def unset_update(bot: Bot, update, job_queue: JobQueue):
@@ -172,14 +180,14 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("cars", cars))
     dp.add_handler(CommandHandler("todaycount", today_count))
     dp.add_handler(CommandHandler("update", update_cars))
-    dp.add_handler(CommandHandler("setupdate", set_update, pass_args=True, pass_job_queue=True))
-    dp.add_handler(CommandHandler("unsetupdate", unset_update, pass_job_queue=True))
+    dp.add_handler(CommandHandler("subscribe", subscribe))
+    dp.add_handler(CommandHandler("unsubscribe", unsubscribe))
     dp.add_handler(CommandHandler("updateinfo", update_info, pass_job_queue=True))
     dp.add_handler(CommandHandler("stats", stats))
     dp.add_handler(RegexHandler("^/query_(\w){10}$", query_handler))
     dp.add_handler(CallbackQueryHandler(car_iterator, pattern="^\d+$"))
     dp.add_handler(CallbackQueryHandler(filtered_car_iterator, pattern="^\d+\s/query_(\w){10}$"))
-
+    set_update(updater.job_queue)
     # log all errors
     dp.add_error_handler(error)
 
