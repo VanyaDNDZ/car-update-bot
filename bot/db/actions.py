@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from sqlalchemy.sql.functions import func
 
-from bot.db.models import Cars, Subscribers
+from bot.db.models import Cars, Subscribers, StagingCars, RemovedCars
 from .engine import get_session
 
 logging.basicConfig(level=logging.DEBUG,
@@ -34,13 +34,49 @@ def get_filtered(q_filter, order):
 
 def update_car(car_iterator):
     added_ids = []
+    removed_cnt = 0
     with closing(get_session()) as session:
+        session.query(StagingCars).delete()
         for item in car_iterator:
-            item.pop("_type", None)
-            car = session.query(Cars).filter(Cars.id == item['id']).first()
-            if not car:
-                added_ids.append(item['id'])
-                session.add(Cars(**item, update_dt=datetime.date.today()))
+            session.add(StagingCars(**item, update_dt=datetime.date.today()))
+        session.flush()
+        deletion_dt = datetime.date.today()
+        for removed in session.query(Cars).outerjoin(StagingCars, Cars.id == StagingCars.id).filter(
+                        StagingCars.id == None).all():
+            session.add(
+                RemovedCars(
+                    id=removed.id,
+                    base_url=removed.base_url,
+                    url=removed.url,
+                    desc=removed.desc,
+                    price=removed.price,
+                    gear=removed.gear,
+                    year=removed.year,
+                    mileage=removed.mileage,
+                    update_dt=removed.update_dt,
+                    deletion_dt=deletion_dt
+                )
+            )
+            session.delete(removed)
+            removed_cnt += 1
+        print("Removed {} cars".format(removed_cnt))
+        session.flush()
+        for new_car in session.query(StagingCars).outerjoin(Cars, Cars.id == StagingCars.id).filter(
+                        Cars.id == None).all():
+            session.add(
+                Cars(
+                    id=new_car.id,
+                    base_url=new_car.base_url,
+                    url=new_car.url,
+                    desc=new_car.desc,
+                    price=new_car.price,
+                    gear=new_car.gear,
+                    year=new_car.year,
+                    mileage=new_car.mileage,
+                    update_dt=deletion_dt
+                )
+            )
+            added_ids.append(new_car.id)
         session.flush()
         session.commit()
     return added_ids

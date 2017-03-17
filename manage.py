@@ -1,6 +1,5 @@
 import sys
 
-import click
 from scrapy.cmdline import execute
 
 from bot.config import load_config

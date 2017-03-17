@@ -7,6 +7,7 @@ from telegram.ext.regexhandler import RegexHandler
 
 from bot.db.actions import get_cars, update_car, get_stats, create_query, get_filtered, save_subscribe, save_unsubscribe, \
     get_subscribers
+from bot.handlers.scraryhub import upload_iterator
 from bot.utils import save_query, get_saved
 from .config import get_config
 
@@ -97,14 +98,7 @@ def update_cars(bot=None, update=None):
 
     logger.info('Start update db')
 
-    def get_iterator():
-        conn = Connection(get_config()['SCRAPYHUB']['token'])
-        project = conn[int(get_config()['SCRAPYHUB']['PROJECT_ID'])]
-        for job in project.jobs():
-            for item in job.items():
-                yield item
-
-    updated = update_car(get_iterator())
+    updated = update_car(upload_iterator())
     if len(updated) > 0:
         for row in get_subscribers():
             notify(row.chat_id, len(updated), save_query(create_query(updated)))
