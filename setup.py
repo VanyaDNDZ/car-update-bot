@@ -15,6 +15,7 @@ telegram_requires = [
 ]
 
 setup(
+    name="car-bot",
     author="VanyaDNDZ",
     description="Simple scrapy tool with telegram ui",
     version="0.1",
