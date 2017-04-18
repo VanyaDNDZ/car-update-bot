@@ -21,7 +21,7 @@ setup(
     install_requires=requires,
     packages=find_packages(),
     entry_points={"scrapy": ["settings = carinfo.settings"]},
-    extras_requires={
+    extras_require={
         'test': ['pytest-cov', 'flake8']
     }
 
