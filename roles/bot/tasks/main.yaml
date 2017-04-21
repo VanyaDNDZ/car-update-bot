@@ -1,0 +1,3 @@
+---
+- name: Bot config creating
+  template: src=config.ini.template dest='{{ base_path }}/config.ini'

@@ -1,5 +1,0 @@
----
-- hosts: localhost
-  tasks:
-  - name: Bot config creating
-    template: src=config.ini.template dest=config.ini
