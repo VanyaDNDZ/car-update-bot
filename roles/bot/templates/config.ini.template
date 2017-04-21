@@ -1,9 +1,9 @@
 [BOTCONFIG]
-TOKEN = {{BOTTOKEN}}
+TOKEN = {{ lookup('env','BOTTOKEN') }}
 
 [DBCONFIG]
 DB_URL = sqlite+pysqlite:///showsdb.sqlite
 
 [SCRAPYHUB]
-TOKEN = {{SCRAPYHUBTOKEN}}
-PROJECT_ID = {{SCRAPYHUBPROJECT}}
+TOKEN = {{ lookup('env','SCRAPYHUBTOKEN') }}
+PROJECT_ID = {{ lookup('env','SCRAPYHUBPROJECT') }}
