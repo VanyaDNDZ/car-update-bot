@@ -1,9 +1,0 @@
-[BOTCONFIG]
-TOKEN = {{ lookup('env','BOTTOKEN') }}
-
-[DBCONFIG]
-DB_URL = sqlite+pysqlite:///showsdb.sqlite
-
-[SCRAPYHUB]
-TOKEN = {{ lookup('env','SCRAPYHUBTOKEN') }}
-PROJECT_ID = {{ lookup('env','SCRAPYHUBPROJECT') }}

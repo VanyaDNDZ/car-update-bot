@@ -1,3 +1,0 @@
----
-- name: Bot config creating
-  template: src=config.ini.template dest='{{ lookup('env','WORKSPACE')  }}/config.ini'
