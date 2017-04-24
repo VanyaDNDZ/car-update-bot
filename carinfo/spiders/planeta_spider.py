@@ -10,7 +10,7 @@ class PlanetaSpider(CrawlSpider):
     name = "carinfo_planeta"
     allowed_domains = ["planetavto.com.ua"]
     start_urls = [
-        "https://planetavto.com.ua/?page=1",
+        "https://planetavto.com.ua/?page=1&region=3&city=6",
     ]
     rules = [
         Rule(LinkExtractor(allow=re.compile("page=(\d+)"), deny="dealer"), callback='parse_items', follow=True),
