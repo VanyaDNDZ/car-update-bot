@@ -1,11 +1,7 @@
 from setuptools import setup, find_packages
 
+
 requires = [
-    'scrapy',
-
-]
-
-telegram_requires = [
     'sqlalchemy',
     'pg8000',
     'requests',
@@ -17,14 +13,14 @@ telegram_requires = [
 setup(
     name="car-bot",
     author="VanyaDNDZ",
-    description="Simple scrapy tool with telegram ui",
+    description="Telegram bot",
     version="0.1",
     install_requires=requires,
     packages=find_packages(),
     entry_points={"scrapy": ["settings = carinfo.settings"]},
     extras_require={
         'test': ['pytest-cov', 'flake8', 'pytest'],
-        'bot': telegram_requires
+        'bot': requires
     }
 
 )
