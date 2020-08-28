@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 requires = [
     'sqlalchemy',
-    'pg8000',
+    'psycopg2-binary',
     'requests',
     'click>=6',
     'scrapinghub',

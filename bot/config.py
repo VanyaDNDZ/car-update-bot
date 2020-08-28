@@ -1,17 +1,17 @@
 import configparser
 import os
 
-CONFIG = None
+CONFIG = {}
 
 
 def load_config():
     global CONFIG
     if not CONFIG:
-        config = configparser.ConfigParser()
-        config_file = os.environ.get('CONFIG_FILE', 'config.ini')
-        current_dir = os.path.dirname(__file__)
-        if os.path.exists(os.path.join(current_dir, '..', config_file)):
-            config.read(os.path.join(current_dir, '..', config_file))
+        config = {}
+        config["DATABASE_URL"] = os.getenv("DATABASE_URL")
+        config["SHUB_API_KEY"] = os.getenv("SHUB_API_KEY")
+        config["SHUB_PROJECT_ID"] = os.getenv("SHUB_PROJECT_ID")
+        config["BOT_TOKEN"] = os.getenv("BOT_TOKEN")
         CONFIG = config
 
 

@@ -9,8 +9,8 @@ MAX_RUNS = 10
 
 def upload_iterator():
     loaded_scrappers = set()
-    conn = Connection(get_config()['SCRAPYHUB']['token'])
-    project = conn[int(get_config()['SCRAPYHUB']['PROJECT_ID'])]
+    conn = Connection(get_config()['SHUB_API_KEY'])
+    project = conn[int(get_config()['SHUB_PROJECT_ID'])]
     runned = 0
     for job in project.jobs():
         if runned > MAX_RUNS:

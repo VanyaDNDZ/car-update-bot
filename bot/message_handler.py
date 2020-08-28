@@ -163,7 +163,7 @@ def query_handler(bot: Bot, update):
 
 
 def run_chat_bot():
-    updater = Updater(get_config()['BOTCONFIG']['token'])
+    updater = Updater(get_config()['BOT_TOKEN'])
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
