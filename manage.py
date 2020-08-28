@@ -1,7 +1,3 @@
-import sys
-
-from scrapy.cmdline import execute
-
 from bot.config import load_config
 from bot.db.engine import get_engine
 from bot.db.models import Base
@@ -15,7 +11,4 @@ def start_bot():
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "start_bot":
-        start_bot()
-    else:
-        execute(sys.argv[:])
+    start_bot()
