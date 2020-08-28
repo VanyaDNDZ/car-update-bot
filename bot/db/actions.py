@@ -23,6 +23,26 @@ def get_cars(days=0, filters=None):
         return cars
 
 
+def get_cars_by_plate(plate):
+    with closing(get_session()) as session:
+        q = session.query(Cars)
+        q = q.filter(Cars.car_plate == plate)
+        cars = q.order_by(Cars.id).all()
+        return cars
+
+
+def get_cars_by_vin(vin):
+    filter_query = Cars.vin == vin
+    if "XXXX" in vin:
+        filter_query = Cars.vin.like(vin.replace("X", "_"))
+
+    with closing(get_session()) as session:
+        q = session.query(Cars)
+        q = q.filter(filter_query)
+        cars = q.order_by(Cars.id).all()
+        return cars
+
+
 def get_filtered(q_filter, order):
     with closing(get_session()) as session:
         q = session.query(Cars)
@@ -34,35 +54,13 @@ def get_filtered(q_filter, order):
 
 def update_car(car_iterator):
     added_ids = []
-    removed_cnt = 0
     with closing(get_session()) as session:
         session.query(StagingCars).delete()
         for item in car_iterator:
-            session.add(StagingCars(**item, update_dt=datetime.date.today()))
-        session.flush()
-        deletion_dt = datetime.date.today()
-        for removed in session.query(Cars).outerjoin(StagingCars, Cars.id == StagingCars.id).filter(
-                        StagingCars.id == None).all():
-            session.add(
-                RemovedCars(
-                    id=removed.id,
-                    base_url=removed.base_url,
-                    url=removed.url,
-                    desc=removed.desc,
-                    price=removed.price,
-                    gear=removed.gear,
-                    year=removed.year,
-                    mileage=removed.mileage,
-                    update_dt=removed.update_dt,
-                    deletion_dt=deletion_dt
-                )
-            )
-            session.delete(removed)
-            removed_cnt += 1
-        print("Removed {} cars".format(removed_cnt))
+            session.merge(StagingCars(**item, update_dt=datetime.date.today()))
         session.flush()
         for new_car in session.query(StagingCars).outerjoin(Cars, Cars.id == StagingCars.id).filter(
-                        Cars.id == None).all():
+                Cars.id == None).all():
             session.add(
                 Cars(
                     id=new_car.id,
@@ -73,10 +71,11 @@ def update_car(car_iterator):
                     gear=new_car.gear,
                     year=new_car.year,
                     mileage=new_car.mileage,
-                    update_dt=deletion_dt
+                    car_plate=new_car.car_plate,
+                    vin=new_car.vin,
+                    update_dt=datetime.date.today()
                 )
             )
-            added_ids.append(new_car.id)
         session.flush()
         session.commit()
     return added_ids

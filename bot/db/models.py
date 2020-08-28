@@ -14,6 +14,8 @@ class Cars(Base):
     gear = Column(TEXT)
     year = Column(TEXT)
     mileage = Column(TEXT)
+    car_plate = Column(TEXT)
+    vin = Column(TEXT)
     update_dt = Column(DATE)
 
 
@@ -27,6 +29,8 @@ class StagingCars(Base):
     gear = Column(TEXT)
     year = Column(TEXT)
     mileage = Column(TEXT)
+    car_plate = Column(TEXT)
+    vin = Column(TEXT)
     update_dt = Column(DATE)
 
 
@@ -40,6 +44,8 @@ class RemovedCars(Base):
     gear = Column(TEXT)
     year = Column(TEXT)
     mileage = Column(TEXT)
+    car_plate = Column(TEXT)
+    vin = Column(TEXT)
     update_dt = Column(DATE)
     deletion_dt = Column(DATE, primary_key=True)
 
