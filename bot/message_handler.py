@@ -4,7 +4,7 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, JobQueue, CallbackQueryHandler
 
 from bot.db.actions import update_car, get_stats, get_filtered, get_cars_by_plate, get_cars_by_vin
-from bot.handlers.scraryhub import upload_iterator
+from bot.handlers.scraryhub import upload_iterator, start_scraping
 from bot.utils import get_saved
 from .config import get_config
 
@@ -124,7 +124,8 @@ def set_update(job_queue: JobQueue):
     due = 60 * 60  # seconds
     for j in job_queue.jobs():
         j.schedule_removal()
-    job_queue.run_repeating(update_cars, due, first=30)
+    job_queue.run_repeating(update_cars, due, first=5 * 60)
+    job_queue.run_repeating(start_scraping, due, first=10)
 
 
 def query_handler(bot: Bot, update):

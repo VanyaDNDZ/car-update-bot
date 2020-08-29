@@ -26,3 +26,11 @@ def upload_iterator():
             yield item
         loaded_scrappers.add(job.info['spider'])
         runned += 1
+
+
+def start_scraping():
+    conn = Connection(get_config()['SHUB_API_KEY'])
+    project = conn[int(get_config()['SHUB_PROJECT_ID'])]
+    spider = project.spiders.get('carinfo_autoria')
+    spider.jobs.run()
+    print("job run")
