@@ -1,4 +1,4 @@
-from scrapinghub import Connection
+from scrapinghub import Connection, ScrapinghubClient
 
 from bot.config import get_config
 
@@ -28,9 +28,9 @@ def upload_iterator():
         runned += 1
 
 
-def start_scraping():
-    conn = Connection(get_config()['SHUB_API_KEY'])
-    project = conn[int(get_config()['SHUB_PROJECT_ID'])]
+def start_scraping(bot=None, update=None):
+    client = ScrapinghubClient(get_config()['SHUB_API_KEY'])
+    project = client.get_project(int(get_config()['SHUB_PROJECT_ID']))
     spider = project.spiders.get('carinfo_autoria')
     spider.jobs.run()
     print("job run")
