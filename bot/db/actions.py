@@ -1,13 +1,11 @@
 import datetime
 import logging
 from contextlib import closing
-from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy import or_, desc
-from sqlalchemy.sql.functions import func
 
-from bot.db.models import Cars, StagingCars, CarsHistory
+from bot.db.models import Cars, StagingCars, CarsHistory, CarsToQuery
 from .engine import get_session
 
 logging.basicConfig(
@@ -17,13 +15,28 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def get_cars(days=0, filters=None):
+def get_or_create_query_id(car_id):
     with closing(get_session()) as session:
-        q = session.query(Cars)
-        q = q.filter(Cars.update_dt >= datetime.date.today() - timedelta(days=days))
-        cars = q.order_by(Cars.id).all()
+        q = session.query(CarsToQuery)
+        q = q.filter(CarsToQuery.car_id == car_id)
+        result = q.all()
+        if result:
+            return result[0].query_id
+        query_id = str(uuid4().int)
+        session.add(CarsToQuery(car_id=car_id, query_id=query_id))
+        session.flush()
+        session.commit()
+        return query_id
 
-        return cars
+
+def get_car_id_by_query_id(query_id):
+    with closing(get_session()) as session:
+        q = session.query(CarsToQuery)
+        q = q.filter(CarsToQuery.query_id == query_id)
+        result = q.all()
+        if result:
+            return result[0].car_id
+        return None
 
 
 def get_cars_by_plate(plate):
@@ -38,6 +51,14 @@ def get_car_history_by_plate(plate):
     with closing(get_session()) as session:
         q = session.query(CarsHistory)
         q = q.filter(CarsHistory.car_plate == plate)
+        cars = q.order_by(desc(CarsHistory.update_dt)).all()
+        return cars
+
+
+def get_car_history_by_id(car_id):
+    with closing(get_session()) as session:
+        q = session.query(CarsHistory)
+        q = q.filter(CarsHistory.id == car_id)
         cars = q.order_by(desc(CarsHistory.update_dt)).all()
         return cars
 
@@ -66,15 +87,6 @@ def get_car_history_by_vin(vin):
         return cars
 
 
-def get_filtered(q_filter, order):
-    with closing(get_session()) as session:
-        q = session.query(Cars)
-        q = q.filter(*q_filter)
-        cars = q.order_by(*order).all()
-
-        return cars
-
-
 def update_car(car_iterator):
     added_ids = []
     with closing(get_session()) as session:
@@ -84,16 +96,16 @@ def update_car(car_iterator):
         session.flush()
 
         for updated_car in (
-                session.query(Cars)
-                        .join(StagingCars, Cars.id == StagingCars.id)
-                        .filter(
-                    or_(
-                        Cars.vin != StagingCars.vin,
-                        Cars.car_plate != StagingCars.car_plate,
-                        Cars.mileage != StagingCars.mileage,
-                        Cars.price != StagingCars.price,
-                    )
+            session.query(Cars)
+            .join(StagingCars, Cars.id == StagingCars.id)
+            .filter(
+                or_(
+                    Cars.vin != StagingCars.vin,
+                    Cars.car_plate != StagingCars.car_plate,
+                    Cars.mileage != StagingCars.mileage,
+                    Cars.price != StagingCars.price,
                 )
+            )
         ):
             session.add(
                 CarsHistory(
@@ -114,7 +126,7 @@ def update_car(car_iterator):
         session.flush()
 
         for updated_car in (
-                session.query(StagingCars).join(Cars, Cars.id == StagingCars.id).all()
+            session.query(StagingCars).join(Cars, Cars.id == StagingCars.id).all()
         ):
             session.merge(
                 Cars(
@@ -134,10 +146,10 @@ def update_car(car_iterator):
         session.flush()
 
         for new_car in (
-                session.query(StagingCars)
-                        .outerjoin(Cars, Cars.id == StagingCars.id)
-                        .filter(Cars.id == None)
-                        .all()
+            session.query(StagingCars)
+            .outerjoin(Cars, Cars.id == StagingCars.id)
+            .filter(Cars.id == None)
+            .all()
         ):
             session.add(
                 Cars(
@@ -156,12 +168,3 @@ def update_car(car_iterator):
             )
         session.commit()
     return added_ids
-
-
-def get_stats():
-    with closing(get_session()) as session:
-        return (
-            session.query(Cars.base_url, Cars.gear, func.count(Cars.base_url))
-                .group_by(Cars.base_url, Cars.gear)
-                .all()
-        )

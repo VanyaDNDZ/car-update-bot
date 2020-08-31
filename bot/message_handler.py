@@ -5,13 +5,14 @@ from telegram.ext import Updater, CommandHandler, JobQueue, CallbackQueryHandler
 
 from bot.db.actions import (
     update_car,
-    get_stats,
-    get_filtered,
     get_cars_by_plate,
-    get_cars_by_vin, get_car_history_by_plate, get_car_history_by_vin,
+    get_cars_by_vin,
+    get_car_history_by_plate,
+    get_car_history_by_vin,
+    get_car_history_by_id,
+    get_or_create_query_id, get_car_id_by_query_id,
 )
 from bot.handlers.scraryhub import upload_iterator
-from bot.utils import get_saved
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,14 @@ def cars(bot, update):
                 [InlineKeyboardButton("Next car", callback_data=f"{vin_or_number} 1")]
             ]
         if len(history) > 0:
-            keyboard.append([InlineKeyboardButton("History", callback_data=f"history 0 {vin_or_number}")])
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        "History",
+                        callback_data=f"historyid 0 {get_or_create_query_id(result[0].id)}",
+                    )
+                ]
+            )
         if keyboard:
             reply_markup = InlineKeyboardMarkup(keyboard)
             kwargs = {"reply_markup": reply_markup}
@@ -79,7 +87,11 @@ def car_history(bot, update):
         kwargs = {}
         if len(result) > 1:
             keyboard = [
-                [InlineKeyboardButton("Next car", callback_data=f"history 1 {vin_or_number}")]
+                [
+                    InlineKeyboardButton(
+                        "Next car", callback_data=f"history 1 {vin_or_number}"
+                    )
+                ]
             ]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -105,24 +117,28 @@ def history_car_iterator(bot, update):
             if item_number != 0:
                 keyboard += [
                     InlineKeyboardButton(
-                        "Prev", callback_data=f"history {item_number - 1} {vin_or_number}"
+                        "Prev",
+                        callback_data=f"history {item_number - 1} {vin_or_number}",
                     )
                 ]
             if item_number + 1 < len(result):
                 keyboard += [
                     InlineKeyboardButton(
-                        "Next", callback_data=f"history {item_number + 1} {vin_or_number}"
+                        "Next",
+                        callback_data=f"history {item_number + 1} {vin_or_number}",
                     )
                 ]
             keyboard = [
                 [
                     InlineKeyboardButton(
-                        "Next", callback_data=f"history {item_number + 1} {vin_or_number}"
+                        "Next",
+                        callback_data=f"history {item_number + 1} {vin_or_number}",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        "Prev", callback_data=f"history {item_number - 1} {vin_or_number}"
+                        "Prev",
+                        callback_data=f"history {item_number - 1} {vin_or_number}",
                     )
                 ],
             ]
@@ -133,6 +149,59 @@ def history_car_iterator(bot, update):
                 f"Vin: {result[item_number].vin}\n"
                 f"Номер: {result[item_number].car_plate}\n"
                 f"Ссылка: {result[item_number].url}"
+            )
+            bot.editMessageText(
+                text=message,
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id,
+                **kwargs,
+            )
+    except Exception as e:
+        print(e)
+
+
+def history_car_iterator_by_id(bot, update):
+    query = update.callback_query
+    _, item_number, query_id = query.data.split(" ")
+    item_number = int(item_number)
+    car_id = get_car_id_by_query_id(query_id)
+    result = get_car_history_by_id(car_id)
+    try:
+        if not result or item_number + 1 > len(result):
+            pass
+        else:
+            keyboard = []
+            if item_number != 0:
+                keyboard += [
+                    InlineKeyboardButton(
+                        "Prev", callback_data=f"historyid {item_number - 1} {query_id}"
+                    )
+                ]
+            if item_number + 1 < len(result):
+                keyboard += [
+                    InlineKeyboardButton(
+                        "Next", callback_data=f"historyid {item_number + 1} {query_id}"
+                    )
+                ]
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "Next", callback_data=f"historyid {item_number + 1} {query_id}"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Prev", callback_data=f"historyid {item_number - 1} {query_id}"
+                    )
+                ],
+            ]
+            kwargs = {"reply_markup": InlineKeyboardMarkup(keyboard)}
+            message = (
+                f"Цена: {result[item_number].price}\n"
+                f"Пробег: {result[item_number].mileage}\n"
+                f"Vin: {result[item_number].vin}\n"
+                f"Номер: {result[item_number].car_plate}\n"
+                f"URL: {result[item_number].url}\n"
             )
             bot.editMessageText(
                 text=message,
@@ -198,72 +267,10 @@ def car_iterator(bot, update):
         print(e)
 
 
-def filtered_car_iterator(bot, update):
-    query = update.callback_query
-    index, query_name = query.data.split(" ")
-
-    stored_filter = get_saved(query_name)
-    if stored_filter:
-        filtred_cars = get_filtered(stored_filter["filter"], stored_filter["order"])
-
-        try:
-            if not filtred_cars or int(index) + 1 > len(filtred_cars):
-                bot.editMessageText(
-                    text="Список пуст",
-                    chat_id=query.message.chat_id,
-                    message_id=query.message.message_id,
-                )
-            else:
-                kwargs = dict()
-
-                if int(index) + 1 < len(filtred_cars):
-                    keyboard = [
-                        [
-                            InlineKeyboardButton(
-                                "Next",
-                                callback_data=" ".join(
-                                    [str(int(index) + 1), query_name]
-                                ),
-                            )
-                        ]
-                    ]
-
-                    kwargs.update(reply_markup=InlineKeyboardMarkup(keyboard))
-
-                bot.editMessageText(
-                    text="{}".format(filtred_cars[int(index)].url),
-                    chat_id=query.message.chat_id,
-                    message_id=query.message.message_id,
-                    **kwargs,
-                )
-        except Exception as e:
-            print(e)
-    else:
-        bot.editMessageText(
-            text="Список пуст",
-            chat_id=query.message.chat_id,
-            message_id=query.message.message_id,
-        )
-
-
 def update_cars(bot=None, update=None):
     logger.info("Start update db")
     update_car(upload_iterator())
     logger.info("DB updated")
-
-
-def stats(bot, update):
-    car_stats = get_stats()
-
-    if not car_stats:
-        bot.sendMessage(update.message.chat_id, text="Список пуст")
-    else:
-        bot.sendMessage(
-            update.message.chat_id,
-            text="\n".join(
-                ["Site: {0} gear: {1} cnt: {2}".format(*stat) for stat in car_stats]
-            ),
-        )
 
 
 def set_update(job_queue: JobQueue):
@@ -272,28 +279,6 @@ def set_update(job_queue: JobQueue):
         j.schedule_removal()
     job_queue.run_repeating(update_cars, due, first=5 * 60)
     job_queue.run_repeating(start_scraping, due, first=10)
-
-
-def query_handler(bot: Bot, update):
-    stored_filter = get_saved(update.message.text)
-    if stored_filter:
-        filtred_cars = get_filtered(stored_filter["filter"], stored_filter["order"])
-        if len(filtred_cars):
-            keyboard = [
-                [
-                    InlineKeyboardButton(
-                        "Next", callback_data=" ".join(["1", update.message.text])
-                    )
-                ]
-            ]
-
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text(
-                text="{}".format(filtred_cars[0].url), reply_markup=reply_markup
-            )
-
-    else:
-        bot.sendMessage(update.message.chat_id, text="Список пуст")
 
 
 def run_chat_bot():
@@ -308,7 +293,12 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("cars", cars))
     dp.add_handler(CommandHandler("carhistory", car_history))
     dp.add_handler(CallbackQueryHandler(car_iterator, pattern="^\\w{8,17} \d+$"))
-    dp.add_handler(CallbackQueryHandler(history_car_iterator, pattern="^history \d+ \\w{8,17}$"))
+    dp.add_handler(
+        CallbackQueryHandler(history_car_iterator, pattern="^history \d+ \\w{8,17}$")
+    )
+    dp.add_handler(
+        CallbackQueryHandler(history_car_iterator_by_id, pattern="^historyid \d+ .*")
+    )
     set_update(updater.job_queue)
     # log all errors
     dp.add_error_handler(error)

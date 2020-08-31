@@ -67,6 +67,12 @@ class RemovedCars(Base):
     deletion_dt = Column(DATE, primary_key=True)
 
 
+class CarsToQuery(Base):
+    __tablename__ = "cars_to_query"
+    car_id = Column(TEXT, primary_key=True)
+    query_id = Column(TEXT)
+
+
 class Subscribers(Base):
     __tablename__ = "subscribers"
     chat_id = Column(TEXT, primary_key=True)
