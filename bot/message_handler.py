@@ -12,7 +12,7 @@ from bot.db.actions import (
     get_car_history_by_id,
     get_or_create_query_id, get_car_id_by_query_id,
 )
-from bot.handlers.scraryhub import upload_iterator
+from bot.handlers.scraryhub import upload_iterator, start_scraping
 from .config import get_config
 
 logger = logging.getLogger(__name__)
