@@ -3,9 +3,9 @@ import logging
 from contextlib import closing
 from uuid import uuid4
 
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, and_
 
-from bot.db.models import Cars, StagingCars, CarsHistory, CarsToQuery
+from bot.db.models import Cars, StagingCars, CarsHistory, CarsToQuery, StagingBags, Bags, BagsPriceHistory
 from .engine import get_session
 
 logging.basicConfig(
@@ -96,16 +96,16 @@ def update_car(car_iterator):
         session.flush()
 
         for updated_car in (
-            session.query(Cars)
-            .join(StagingCars, Cars.id == StagingCars.id)
-            .filter(
-                or_(
-                    Cars.vin != StagingCars.vin,
-                    Cars.car_plate != StagingCars.car_plate,
-                    Cars.mileage != StagingCars.mileage,
-                    Cars.price != StagingCars.price,
+                session.query(Cars)
+                        .join(StagingCars, Cars.id == StagingCars.id)
+                        .filter(
+                    or_(
+                        Cars.vin != StagingCars.vin,
+                        Cars.car_plate != StagingCars.car_plate,
+                        Cars.mileage != StagingCars.mileage,
+                        Cars.price != StagingCars.price,
+                    )
                 )
-            )
         ):
             session.add(
                 CarsHistory(
@@ -126,7 +126,7 @@ def update_car(car_iterator):
         session.flush()
 
         for updated_car in (
-            session.query(StagingCars).join(Cars, Cars.id == StagingCars.id).all()
+                session.query(StagingCars).join(Cars, Cars.id == StagingCars.id).all()
         ):
             session.merge(
                 Cars(
@@ -146,10 +146,10 @@ def update_car(car_iterator):
         session.flush()
 
         for new_car in (
-            session.query(StagingCars)
-            .outerjoin(Cars, Cars.id == StagingCars.id)
-            .filter(Cars.id == None)
-            .all()
+                session.query(StagingCars)
+                        .outerjoin(Cars, Cars.id == StagingCars.id)
+                        .filter(Cars.id == None)
+                        .all()
         ):
             session.add(
                 Cars(
@@ -168,3 +168,96 @@ def update_car(car_iterator):
             )
         session.commit()
     return added_ids
+
+
+def update_bags(bag_iterator):
+    added_ids = []
+    with closing(get_session()) as session:
+        session.query(StagingBags).delete()
+        for item in bag_iterator:
+            session.merge(StagingBags(**item))
+        session.flush()
+
+        for first_updated in session.query(
+                StagingBags, Bags.chat_id, Bags.row_id
+        ).join(Bags, and_([Bags.url == StagingBags.url, Bags.name.is_(None)])):
+            session.merge(
+                Bags(
+                    row_id=first_updated.row_id,
+                    name=first_updated.name,
+                    url=first_updated.url,
+                    discount_price=first_updated.discount_price,
+                    base_price=first_updated.base_price,
+                    chat_id=first_updated.chat_id
+                )
+            )
+
+        for updated_bag in session.query(Bags).join(
+                Bags, and_([Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
+                    StagingBags.base_price != Bags.base_price,
+                    StagingBags.discount_price != Bags.discount_price,
+                )])):
+            added_ids.append(updated_bag.row_id)
+            session.add(
+                BagsPriceHistory(
+                    bag_id=updated_bag.row_id,
+                    url=updated_bag.url,
+                    discount_price=updated_bag.discount_price,
+                    base_price=updated_bag.base_price,
+                    name=updated_bag.name,
+                )
+            )
+
+        for updated_bag in session.query(
+                StagingBags, Bags.chat_id, Bags.row_id
+        ).join(Bags, and_([Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
+            StagingBags.base_price != Bags.base_price,
+            StagingBags.discount_price != Bags.discount_price,
+        )])):
+            added_ids.append(updated_bag.row_id)
+            session.merge(
+                Bags(
+                    row_id=updated_bag.row_id,
+                    name=updated_bag.name,
+                    url=updated_bag.url,
+                    discount_price=updated_bag.discount_price,
+                    base_price=updated_bag.base_price,
+                    chat_id=updated_bag.chat_id
+                )
+            )
+
+        session.commit()
+
+    return added_ids
+
+
+def add_bag(chat_id, url):
+    with closing(get_session()) as session:
+        session.add(
+            Bags(
+
+                chat_id=chat_id,
+                url=url
+            )
+        )
+        session.commit()
+
+
+def get_bags_for_chat(chat_id):
+    with closing(get_session()) as session:
+        q = session.query(Bags)
+        q = q.filter(Bags.chat_id == chat_id)
+        return q.order_by(desc(Bags.row_id)).all()
+
+
+def delete_subscription(bag_id):
+    with closing(get_session()) as session:
+        session.query(BagsPriceHistory).filter(and_(BagsPriceHistory.bag_id == bag_id)).delete()
+        session.query(Bags).filter(and_(Bags.row_id == bag_id)).delete()
+        session.commit()
+
+
+def get_url_to_parse():
+    with closing(get_session()) as session:
+        q = session.query(Bags.url)
+        return q.order_by(desc(Bags.row_id)).all()

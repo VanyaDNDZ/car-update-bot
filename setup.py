@@ -8,6 +8,7 @@ requires = [
     'click>=6',
     'scrapinghub',
     'python-telegram-bot',
+    'sanic'
 ]
 
 setup(

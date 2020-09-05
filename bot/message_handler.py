@@ -269,7 +269,7 @@ def car_iterator(bot, update):
 
 def update_cars(bot=None, update=None):
     logger.info("Start update db")
-    update_car(upload_iterator())
+    update_car(upload_iterator(["carinfo_autoria"]))
     logger.info("DB updated")
 
 
