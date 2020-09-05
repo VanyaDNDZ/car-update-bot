@@ -5,6 +5,7 @@ from bot.db.models import Base
 from bot.message_handler import run_chat_bot
 from bot.webapp import app
 from multiprocessing import Process
+import os
 
 
 def start_car_bot():
@@ -21,7 +22,7 @@ def start_bags_bot():
 
 def start_app():
     load_config()
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=os.getenv("PORT"))
 
 
 if __name__ == "__main__":
