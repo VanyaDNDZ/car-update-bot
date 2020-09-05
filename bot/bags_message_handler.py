@@ -1,5 +1,6 @@
 import logging
 
+import requests
 from telegram import Bot, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import Updater, CommandHandler, JobQueue, CallbackQueryHandler
 
@@ -156,11 +157,16 @@ def update_items(bot=None, update=None):
     logger.info("DB updated")
 
 
+def ping(bot, update):
+    requests.get("https://safe-reaches-89165.herokuapp.com?id=44032f458ba9b300d91af4e483ec896e")
+
+
 def set_update(job_queue: JobQueue):
     due = 60 * 60  # seconds
     for j in job_queue.jobs():
         j.schedule_removal()
     job_queue.run_repeating(update_items, due, first=5 * 60)
+    job_queue.run_repeating(ping, 10*60, first=5 * 60)
 
     def scraping_fn(bot=None, update=None):
         start_scraping(spider="coccinelle_crawl")
