@@ -132,8 +132,12 @@ def bagupdate_iterator(bot, update):
 
 
 def add_url(bot, update):
-    add_bag(chat_id=update.message.chat_id, url=update.message.text[8:])
-    bot.sendMessage(update.message.chat_id, text="Ссылка добавлена")
+    url, _ = update.message.text[8:].split('#')
+    if url:
+        add_bag(chat_id=update.message.chat_id, url=update.message.text[8:])
+        bot.sendMessage(update.message.chat_id, text="Ссылка добавлена")
+    else:
+        bot.sendMessage(update.message.chat_id, text="Неверная ссылка")
 
 
 def unsubscribe(bot, update):
