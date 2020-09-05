@@ -25,9 +25,6 @@ def start_app():
 
 
 if __name__ == "__main__":
-    # start_car_bot()
-    # start_bags_bot()
-    # start_app()
     p1 = Process(target=start_car_bot)
     p2 = Process(target=start_bags_bot)
     p3 = Process(target=start_app)
