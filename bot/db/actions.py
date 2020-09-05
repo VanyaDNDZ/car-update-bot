@@ -260,4 +260,4 @@ def delete_subscription(bag_id):
 def get_url_to_parse():
     with closing(get_session()) as session:
         q = session.query(Bags.url)
-        return q.order_by(desc(Bags.row_id)).all()
+        return [el for el in q.order_by(desc(Bags.row_id)).all()]
