@@ -10,13 +10,11 @@ import os
 
 def start_car_bot():
     load_config()
-    Base.metadata.create_all(get_engine())
     run_chat_bot()
 
 
 def start_bags_bot():
     load_config()
-    Base.metadata.create_all(get_engine())
     bags_bot()
 
 
@@ -26,6 +24,8 @@ def start_app():
 
 
 if __name__ == "__main__":
+    load_config()
+    Base.metadata.create_all(get_engine())
     p1 = Process(target=start_car_bot)
     p2 = Process(target=start_bags_bot)
     p1.start()

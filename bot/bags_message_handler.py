@@ -5,7 +5,8 @@ from telegram.ext import Updater, CommandHandler, JobQueue, CallbackQueryHandler
 
 from bot.handlers.scraryhub import upload_iterator, start_scraping
 from .config import get_config
-from .db.actions import add_bag, get_bags_for_chat, delete_subscription, update_bags
+from .db.actions import add_bag, get_bags_for_chat, delete_subscription, update_bags, create_bags_query_id, \
+    get_bags_for_query
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -92,6 +93,43 @@ def bag_iterator(bot, update):
         print(e)
 
 
+def bagupdate_iterator(bot, update):
+    query = update.callback_query
+    _, query_id, item_number = query.data.split(" ")
+    result = get_bags_for_query(query_id)
+    item_number = int(item_number)
+    try:
+        if not result or item_number + 1 > len(result):
+            pass
+        else:
+            keyboard = [[
+                InlineKeyboardButton(
+                    "Next", callback_data=f"nextbagupdate {query_id} {item_number + 1}"
+                )
+            ], [
+                InlineKeyboardButton(
+                    "Prev", callback_data=f"nextbagupdate {query_id} {item_number - 1}"
+                )
+            ]]
+
+            kwargs = {"reply_markup": InlineKeyboardMarkup(keyboard)}
+
+            message = (
+                f"name: {result[item_number].name}\n"
+                f"discount_price: {result[item_number].discount_price}\n"
+                f"base_price: {result[item_number].base_price}\n"
+                f"{result[item_number].url}\n"
+            )
+            bot.editMessageText(
+                text=message,
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id,
+                **kwargs,
+            )
+    except Exception as e:
+        print(e)
+
+
 def add_url(bot, update):
     add_bag(chat_id=update.message.chat_id, url=update.message.text[8:])
     bot.sendMessage(update.message.chat_id, text="Ссылка добавлена")
@@ -106,7 +144,15 @@ def unsubscribe(bot, update):
 
 def update_items(bot=None, update=None):
     logger.info("Start update db")
-    update_bags(upload_iterator(["coccinelle_crawl"]))
+    added_ids = update_bags(upload_iterator(["coccinelle_crawl"]))
+    for chat_id, ids in added_ids.items():
+        keyboard = [[
+            InlineKeyboardButton(
+                "Смотреть", callback_data=f"nextbagupdate {create_bags_query_id(str(chat_id), ids)} 0"
+            )
+        ]]
+        kwargs = {"reply_markup": InlineKeyboardMarkup(keyboard)}
+        bot.sendMessage(chat_id, text=f"Обновилось {len(ids)} машин", **kwargs)
     logger.info("DB updated")
 
 
@@ -135,6 +181,7 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("addurl", add_url))
     dp.add_handler(CallbackQueryHandler(bag_iterator, pattern="^nextbag \d+$"))
     dp.add_handler(CallbackQueryHandler(unsubscribe, pattern="^unsub \d+$"))
+    dp.add_handler(CallbackQueryHandler(bagupdate_iterator, pattern="^nextbagupdate .*$"))
     set_update(updater.job_queue)
     # log all errors
     dp.add_error_handler(error)

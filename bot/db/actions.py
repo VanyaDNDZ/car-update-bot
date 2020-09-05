@@ -1,11 +1,12 @@
 import datetime
 import logging
+from collections import defaultdict
 from contextlib import closing
 from uuid import uuid4
 
 from sqlalchemy import or_, desc, and_
 
-from bot.db.models import Cars, StagingCars, CarsHistory, CarsToQuery, StagingBags, Bags, BagsPriceHistory
+from bot.db.models import Cars, StagingCars, CarsHistory, CarsToQuery, StagingBags, Bags, BagsPriceHistory, BagsToQuery
 from .engine import get_session
 
 logging.basicConfig(
@@ -170,8 +171,24 @@ def update_car(car_iterator):
     return added_ids
 
 
+def create_bags_query_id(chat_id, ids):
+    with closing(get_session()) as session:
+        query_id = str(uuid4().int)
+        session.add(BagsToQuery(query_id=query_id, updated_items=",".join([str(el) for el in ids]), chat_id=chat_id))
+        session.flush()
+        session.commit()
+        return query_id
+
+
+def get_bags_for_query(query_id):
+    with closing(get_session()) as session:
+        item = session.query(BagsToQuery).filter(BagsToQuery.query_id == query_id).one()
+        q = session.query(Bags).filter(Bags.row_id.in_([el.strip() for el in item.updated_items.split(",")]))
+        return q.order_by(desc(Bags.row_id)).all()
+
+
 def update_bags(bag_iterator):
-    added_ids = []
+    added_ids = defaultdict(list)
     with closing(get_session()) as session:
         session.query(StagingBags).delete()
         for item in bag_iterator:
@@ -180,24 +197,23 @@ def update_bags(bag_iterator):
 
         for first_updated in session.query(
                 StagingBags, Bags.chat_id, Bags.row_id
-        ).join(Bags, and_([Bags.url == StagingBags.url, Bags.name.is_(None)])):
+        ).join(Bags, and_(Bags.url == StagingBags.url, Bags.name.is_(None))):
             session.merge(
                 Bags(
                     row_id=first_updated.row_id,
-                    name=first_updated.name,
-                    url=first_updated.url,
-                    discount_price=first_updated.discount_price,
-                    base_price=first_updated.base_price,
+                    name=first_updated.StagingBags.name,
+                    url=first_updated.StagingBags.url,
+                    discount_price=first_updated.StagingBags.discount_price,
+                    base_price=first_updated.StagingBags.base_price,
                     chat_id=first_updated.chat_id
                 )
             )
 
         for updated_bag in session.query(Bags).join(
-                Bags, and_([Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
+                StagingBags, and_(Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
                     StagingBags.base_price != Bags.base_price,
                     StagingBags.discount_price != Bags.discount_price,
-                )])):
-            added_ids.append(updated_bag.row_id)
+                ))):
             session.add(
                 BagsPriceHistory(
                     bag_id=updated_bag.row_id,
@@ -210,18 +226,18 @@ def update_bags(bag_iterator):
 
         for updated_bag in session.query(
                 StagingBags, Bags.chat_id, Bags.row_id
-        ).join(Bags, and_([Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
+        ).join(Bags, and_(Bags.url == StagingBags.url, Bags.name.isnot(None), or_(
             StagingBags.base_price != Bags.base_price,
             StagingBags.discount_price != Bags.discount_price,
-        )])):
-            added_ids.append(updated_bag.row_id)
+        ))):
+            added_ids[updated_bag.chat_id].append(updated_bag.row_id)
             session.merge(
                 Bags(
                     row_id=updated_bag.row_id,
-                    name=updated_bag.name,
-                    url=updated_bag.url,
-                    discount_price=updated_bag.discount_price,
-                    base_price=updated_bag.base_price,
+                    name=updated_bag.StagingBags.name,
+                    url=updated_bag.StagingBags.url,
+                    discount_price=updated_bag.StagingBags.discount_price,
+                    base_price=updated_bag.StagingBags.base_price,
                     chat_id=updated_bag.chat_id
                 )
             )

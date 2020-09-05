@@ -76,6 +76,13 @@ class CarsToQuery(Base):
     query_id = Column(TEXT)
 
 
+class BagsToQuery(Base):
+    __tablename__ = "bags_to_query"
+    query_id = Column(TEXT, primary_key=True)
+    updated_items = Column(TEXT)
+    chat_id = Column(TEXT)
+
+
 class Bags(Base):
     __tablename__ = "bags"
     row_id = Column(Integer, Sequence('bags_id_seq'))
@@ -103,6 +110,7 @@ class BagsPriceHistory(Base):
     url = Column(TEXT, ForeignKey("bags.url"))
     discount_price = Column(TEXT)
     base_price = Column(TEXT)
+    name = Column(TEXT)
     update_dt = Column(TIMESTAMP, default=datetime.datetime.utcnow)
 
 
