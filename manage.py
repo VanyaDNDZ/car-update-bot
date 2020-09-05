@@ -28,8 +28,6 @@ def start_app():
 if __name__ == "__main__":
     p1 = Process(target=start_car_bot)
     p2 = Process(target=start_bags_bot)
-    p3 = Process(target=start_app)
     p1.start()
     p2.start()
-    p3.start()
-    p3.join()
+    start_app()

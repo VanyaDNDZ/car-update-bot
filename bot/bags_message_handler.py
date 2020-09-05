@@ -135,7 +135,7 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("addurl", add_url))
     dp.add_handler(CallbackQueryHandler(bag_iterator, pattern="^nextbag \d+$"))
     dp.add_handler(CallbackQueryHandler(unsubscribe, pattern="^unsub \d+$"))
-    # set_update(updater.job_queue)
+    set_update(updater.job_queue)
     # log all errors
     dp.add_error_handler(error)
 
