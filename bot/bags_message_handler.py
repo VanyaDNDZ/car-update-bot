@@ -166,7 +166,7 @@ def ping(bot, update):
 
 
 def set_update(job_queue: JobQueue):
-    due = 60 * 60  # seconds
+    due = 15 * 60  # seconds
     for j in job_queue.jobs():
         j.schedule_removal()
     job_queue.run_repeating(update_items, due, first=5 * 60)
