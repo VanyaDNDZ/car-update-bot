@@ -277,7 +277,7 @@ def set_update(job_queue: JobQueue):
     due = 60 * 60  # seconds
     for j in job_queue.jobs():
         j.schedule_removal()
-    job_queue.run_repeating(update_cars, due, first=5 * 60)
+    job_queue.run_repeating(update_cars, due, first=15 * 60)
     job_queue.run_repeating(start_scraping, due, first=10)
 
 

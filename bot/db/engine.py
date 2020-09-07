@@ -1,9 +1,9 @@
-import os
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, session
 
 from ..config import get_config
+
+ENGINE = None
 
 
 def get_engine():
@@ -13,4 +13,7 @@ def get_engine():
 
 
 def get_session() -> session:
-    return sessionmaker(bind=get_engine())()
+    global ENGINE
+    if ENGINE is None:
+        ENGINE = get_engine()
+    return sessionmaker(bind=ENGINE)()
