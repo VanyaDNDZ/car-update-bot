@@ -157,7 +157,7 @@ def update_items(bot=None, update=None):
             )
         ]]
         kwargs = {"reply_markup": InlineKeyboardMarkup(keyboard)}
-        bot.sendMessage(chat_id, text=f"Обновилось {len(ids)} машин", **kwargs)
+        bot.sendMessage(chat_id, text=f"Обновилось {len(ids)} сумки", **kwargs)
     logger.info("DB updated")
 
 
