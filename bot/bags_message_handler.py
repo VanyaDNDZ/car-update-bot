@@ -132,7 +132,7 @@ def bagupdate_iterator(bot, update):
 
 
 def add_url(bot, update):
-    url, _ = update.message.text[8:].split('#')
+    url = update.message.text[8:].split('#')[0]
     if url:
         add_bag(chat_id=update.message.chat_id, url=update.message.text[8:])
         bot.sendMessage(update.message.chat_id, text="Ссылка добавлена")
