@@ -12,7 +12,7 @@ from bot.db.actions import (
     get_car_history_by_id,
     get_or_create_query_id, get_car_id_by_query_id, filter_cars,
 )
-from bot.handlers.scraryhub import upload_iterator, start_scraping
+from bot.handlers.scraryhub import upload_iterator
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ def latestcars(bot, update):
             f"Пробег: {result[item_number].mileage}\n"
             f"Vin: {result[item_number].vin}\n"
             f"Номер: {result[item_number].car_plate}\n"
+            f"Дата: {result[item_number].update_dt}\n"
             f"Ссылка: {result[item_number].url}"
         )
         kwargs = {}
@@ -97,11 +98,11 @@ def latest_car_iterator(bot, update):
     query = update.callback_query
     data = query.data.split(" ")
     item_number = data[-1]
-    filter = data[1:-1]
+    filter = " ".join(data[1:-1])
     item_number = int(item_number)
     result = filter_cars(filter)
     if not result:
-        bot.sendMessage(update.message.chat_id, text="Ничего не нашли")
+        bot.sendMessage(query.message.chat_id, text="Ничего не нашли")
     try:
         if not result or item_number + 1 > len(result):
             pass
@@ -126,6 +127,7 @@ def latest_car_iterator(bot, update):
                 f"Пробег: {result[item_number].mileage}\n"
                 f"Vin: {result[item_number].vin}\n"
                 f"Номер: {result[item_number].car_plate}\n"
+                f"Дата: {result[item_number].update_dt}\n"
                 f"Ссылка: {result[item_number].url}"
             )
             bot.editMessageText(
