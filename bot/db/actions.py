@@ -2,6 +2,7 @@ import datetime
 import logging
 from collections import defaultdict
 from contextlib import closing
+from typing import List
 from uuid import uuid4
 
 from sqlalchemy import or_, desc, and_
@@ -38,6 +39,17 @@ def get_car_id_by_query_id(query_id):
         if result:
             return result[0].car_id
         return None
+
+
+def filter_cars(filter_string: str, offset=0) -> List[Cars]:
+    with closing(get_session()) as session:
+        q = session.query(Cars).filter(Cars.update_dt.isnot(None))
+
+        q = q.order_by(desc(Cars.update_dt), Cars.id)
+        if filter_string:
+            q = q.filter(Cars.desc.ilike(f'%{filter_string}%'))
+
+        return q.all()
 
 
 def get_cars_by_plate(plate):

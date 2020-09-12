@@ -10,7 +10,7 @@ from bot.db.actions import (
     get_car_history_by_plate,
     get_car_history_by_vin,
     get_car_history_by_id,
-    get_or_create_query_id, get_car_id_by_query_id,
+    get_or_create_query_id, get_car_id_by_query_id, filter_cars,
 )
 from bot.handlers.scraryhub import upload_iterator, start_scraping
 from .config import get_config
@@ -64,6 +64,78 @@ def cars(bot, update):
             kwargs = {"reply_markup": reply_markup}
 
         update.message.reply_text(text=message, **kwargs)
+
+
+def latestcars(bot, update):
+    filter = update.message.text[11:].strip()
+    result = filter_cars(filter)
+    item_number = 0
+    if not result:
+        bot.sendMessage(update.message.chat_id, text="Ничего не нашли")
+    else:
+        message = (
+            f"Цена: {result[item_number].price}\n"
+            f"Пробег: {result[item_number].mileage}\n"
+            f"Vin: {result[item_number].vin}\n"
+            f"Номер: {result[item_number].car_plate}\n"
+            f"Ссылка: {result[item_number].url}"
+        )
+        kwargs = {}
+        keyboard = []
+        if len(result) > 1:
+            keyboard = [
+                [InlineKeyboardButton("Next car", callback_data=f"ltcars {filter} 1")]
+            ]
+        if keyboard:
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            kwargs = {"reply_markup": reply_markup}
+
+        update.message.reply_text(text=message, **kwargs)
+
+
+def latest_car_iterator(bot, update):
+    query = update.callback_query
+    data = query.data.split(" ")
+    item_number = data[-1]
+    filter = data[1:-1]
+    item_number = int(item_number)
+    result = filter_cars(filter)
+    if not result:
+        bot.sendMessage(update.message.chat_id, text="Ничего не нашли")
+    try:
+        if not result or item_number + 1 > len(result):
+            pass
+        else:
+            keyboard = [
+                [
+                    InlineKeyboardButton(
+                        "Next",
+                        callback_data=f"ltcars {filter} {item_number + 1}",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "Prev",
+                        callback_data=f"ltcars {filter} {item_number - 1}",
+                    )
+                ],
+            ]
+            kwargs = {"reply_markup": InlineKeyboardMarkup(keyboard)}
+            message = (
+                f"Цена: {result[item_number].price}\n"
+                f"Пробег: {result[item_number].mileage}\n"
+                f"Vin: {result[item_number].vin}\n"
+                f"Номер: {result[item_number].car_plate}\n"
+                f"Ссылка: {result[item_number].url}"
+            )
+            bot.editMessageText(
+                text=message,
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id,
+                **kwargs,
+            )
+    except Exception as e:
+        print(e)
 
 
 def car_history(bot, update):
@@ -291,8 +363,10 @@ def run_chat_bot():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", start))
     dp.add_handler(CommandHandler("cars", cars))
+    dp.add_handler(CommandHandler("latestcars", latestcars))
     dp.add_handler(CommandHandler("carhistory", car_history))
     dp.add_handler(CallbackQueryHandler(car_iterator, pattern="^\\w{8,17} \d+$"))
+    dp.add_handler(CallbackQueryHandler(latest_car_iterator, pattern="^ltcars .* \d+$"))
     dp.add_handler(
         CallbackQueryHandler(history_car_iterator, pattern="^history \d+ \\w{8,17}$")
     )
