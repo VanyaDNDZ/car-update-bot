@@ -105,7 +105,7 @@ def update_car(car_iterator):
     with closing(get_session()) as session:
         session.query(StagingCars).delete()
         for item in car_iterator:
-            session.merge(StagingCars(**item, update_dt=datetime.date.today()))
+            session.merge(StagingCars(**item, update_dt=datetime.datetime.now()))
         session.flush()
 
         for updated_car in (
@@ -155,7 +155,7 @@ def update_car(car_iterator):
                     mileage=updated_car.mileage,
                     car_plate=updated_car.car_plate,
                     vin=updated_car.vin,
-                    update_dt=datetime.date.today(),
+                    update_dt=datetime.datetime.now(),
                 )
             )
         session.flush()
@@ -179,7 +179,7 @@ def update_car(car_iterator):
                     mileage=new_car.mileage,
                     car_plate=new_car.car_plate,
                     vin=new_car.vin,
-                    update_dt=datetime.date.today(),
+                    update_dt=datetime.datetime.now(),
                 )
             )
         session.commit()

@@ -21,7 +21,7 @@ class Cars(Base):
     mileage = Column(TEXT)
     car_plate = Column(TEXT)
     vin = Column(TEXT)
-    update_dt = Column(DATE)
+    update_dt = Column(TIMESTAMP)
 
 
 class StagingCars(Base):
@@ -37,7 +37,7 @@ class StagingCars(Base):
     mileage = Column(TEXT)
     car_plate = Column(TEXT)
     vin = Column(TEXT)
-    update_dt = Column(DATE)
+    update_dt = Column(TIMESTAMP)
 
 
 class CarsHistory(Base):
@@ -70,7 +70,7 @@ class RemovedCars(Base):
     mileage = Column(TEXT)
     car_plate = Column(TEXT)
     vin = Column(TEXT)
-    update_dt = Column(DATE)
+    update_dt = Column(TIMESTAMP)
     deletion_dt = Column(DATE, primary_key=True)
 
 
