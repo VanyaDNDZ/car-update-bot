@@ -42,6 +42,8 @@ def cars(bot, update):
         message = (
             f"Цена: {result[0].price}\n"
             f"Пробег: {result[0].mileage}\n"
+            f"Vin: {result[0].vin}\n"
+            f"Номер: {result[0].car_plate}\n"
             f"Ссылка: {result[0].url}"
         )
         kwargs = {}
@@ -329,6 +331,8 @@ def car_iterator(bot, update):
             message = (
                 f"Цена: {result[item_number].price}\n"
                 f"Пробег: {result[item_number].mileage}\n"
+                f"Vin: {result[item_number].vin}\n"
+                f"Номер: {result[item_number].car_plate}\n"
                 f"Ссылка: {result[item_number].url}"
             )
             bot.editMessageText(
