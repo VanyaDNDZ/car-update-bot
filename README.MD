@@ -13,3 +13,5 @@ unsubscribe - Unsubscribe from notification
 updateinfo - Update information
 stats - get stats
 ```
+
+try checks
